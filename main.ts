@@ -19,6 +19,7 @@ export default class LocalLLMAssistant extends Plugin {
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
+		await this.ensureCollectionExists();
 
 		// Add a ribbon icon
 		const ribbonIconEl = this.addRibbonIcon('brain', 'Local LLM Assistant', async () => {
@@ -116,7 +117,7 @@ export default class LocalLLMAssistant extends Plugin {
 		}
 	}
 
-	private hashPath(path: string): string {
+	private hashPath(path: string): number {
 		// Simple hash function for demo purposes
 		let hash = 0;
 		for (let i = 0; i < path.length; i++) {
@@ -124,7 +125,39 @@ export default class LocalLLMAssistant extends Plugin {
 			hash = ((hash << 5) - hash) + char;
 			hash = hash & hash;
 		}
-		return Math.abs(hash).toString();
+		return Math.abs(hash);
+	}
+
+	private async ensureCollectionExists() {
+		try {
+			// Check if collection exists
+			const response = await fetch(`${this.settings.qdrantHost}/collections/${this.settings.qdrantCollection}`);
+			
+			if (response.status === 404) {
+				// Collection doesn't exist, create it
+				const createResponse = await fetch(`${this.settings.qdrantHost}/collections/${this.settings.qdrantCollection}`, {
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({
+						vectors: {
+							size: 384,
+							distance: "Cosine"
+						}
+					})
+				});
+
+				if (!createResponse.ok) {
+					throw new Error(`Failed to create collection: ${createResponse.statusText}`);
+				}
+				
+				console.log(`Created Qdrant collection: ${this.settings.qdrantCollection}`);
+			}
+		} catch (error) {
+			console.error('Error ensuring collection exists:', error);
+			new Notice('Failed to initialize Qdrant collection');
+		}
 	}
 }
 
