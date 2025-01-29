@@ -142,7 +142,7 @@ export default class LocalLLMAssistant extends Plugin {
 					},
 					body: JSON.stringify({
 						vectors: {
-							size: 384,
+							size: 768,
 							distance: "Cosine"
 						}
 					})
