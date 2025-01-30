@@ -21,6 +21,15 @@ export default class LocalLLMAssistant extends Plugin {
 		await this.loadSettings();
 		await this.ensureCollectionExists();
 
+		// Register event to handle note deletion
+		this.registerEvent(
+			this.app.vault.on('delete', async (file: TFile) => {
+				if (file.extension === 'md') {
+					await this.deleteEmbedding(file.path);
+				}
+			})
+		);
+
 		// Add command to find similar notes
 		this.addCommand({
 			id: 'find-similar-notes',
@@ -168,6 +177,29 @@ export default class LocalLLMAssistant extends Plugin {
 		} catch (error) {
 			console.error('Error finding similar notes:', error);
 			new Notice('Failed to find similar notes');
+		}
+	}
+
+	async deleteEmbedding(path: string) {
+		try {
+			const pointId = this.hashPath(path);
+			const response = await fetch(`${this.settings.qdrantHost}/collections/${this.settings.qdrantCollection}/points/delete`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					points: [pointId]
+				})
+			});
+
+			if (!response.ok) {
+				throw new Error(`Failed to delete embedding: ${response.statusText}`);
+			}
+			new Notice(`Embedding deleted for: ${path}`);
+		} catch (error) {
+			console.error(`Error deleting embedding for ${path}:`, error);
+			new Notice(`Failed to delete embedding for: ${path}`);
 		}
 	}
 
