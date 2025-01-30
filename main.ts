@@ -237,8 +237,6 @@ export default class LocalLLMAssistant extends Plugin {
 				if (!createResponse.ok) {
 					throw new Error(`Failed to create collection: ${createResponse.statusText}`);
 				}
-				
-				console.log(`Created Qdrant collection: ${this.settings.qdrantCollection}`);
 			}
 		} catch (error) {
 			console.error('Error ensuring collection exists:', error);

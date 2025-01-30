@@ -1,7 +1,7 @@
 {
 	"id": "local-llm-assistant",
 	"name": "Local LLM Assistant",
-	"version": "1.0.0",
+	"version": "1.0.2",
 	"minAppVersion": "0.15.0",
 	"description": "Using local vector database and Ollama for local LLM assistance",
 	"author": "Will Wu",
