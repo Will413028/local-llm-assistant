@@ -1,4 +1,4 @@
-import { App, Plugin, TFile, Notice, PluginSettingTab, Setting, TextComponent } from 'obsidian';
+import { App, Plugin, TFile, Notice, PluginSettingTab, Setting, TextComponent, Modal, WorkspaceLeaf } from 'obsidian';
 
 interface LocalLLMAssistantSettings {
 	ollamaHost: string;
@@ -20,6 +20,20 @@ export default class LocalLLMAssistant extends Plugin {
 	async onload(): Promise<void> {
 		await this.loadSettings();
 		await this.ensureCollectionExists();
+
+		// Add command to find similar notes
+		this.addCommand({
+			id: 'find-similar-notes',
+			name: 'Find Similar Notes',
+			callback: async () => {
+				const activeFile = this.app.workspace.getActiveFile();
+				if (!activeFile) {
+					new Notice('No active file');
+					return;
+				}
+				await this.findSimilarNotes(activeFile);
+			}
+		});
 
 		// Add a ribbon icon
 		const ribbonIconEl = this.addRibbonIcon('brain', 'Local LLM Assistant', async () => {
@@ -117,6 +131,46 @@ export default class LocalLLMAssistant extends Plugin {
 		}
 	}
 
+	async findSimilarNotes(file: TFile) {
+		try {
+			const content = await this.app.vault.read(file);
+			const embedding = await this.getEmbedding(content);
+			
+			const response = await fetch(`${this.settings.qdrantHost}/collections/${this.settings.qdrantCollection}/points/search`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					vector: embedding,
+					limit: 5,
+					with_payload: true,
+					score_threshold: 0.7
+				})
+			});
+
+			if (!response.ok) {
+				throw new Error(`Failed to search similar notes: ${response.statusText}`);
+			}
+
+			const data = await response.json();
+			const results = data.result;
+
+			if (results.length === 0) {
+				new Notice('No similar notes found');
+				return;
+			}
+
+			// Create modal to display results
+			const modal = new SimilarNotesModal(this.app, results, file.path);
+			modal.open();
+
+		} catch (error) {
+			console.error('Error finding similar notes:', error);
+			new Notice('Failed to find similar notes');
+		}
+	}
+
 	private hashPath(path: string): number {
 		// Simple hash function for demo purposes
 		let hash = 0;
@@ -158,6 +212,79 @@ export default class LocalLLMAssistant extends Plugin {
 			console.error('Error ensuring collection exists:', error);
 			new Notice('Failed to initialize Qdrant collection');
 		}
+	}
+}
+
+class SimilarNotesModal extends Modal {
+	private results: any[];
+	private currentPath: string;
+
+	constructor(app: App, results: any[], currentPath: string) {
+		super(app);
+		this.results = results;
+		this.currentPath = currentPath;
+	}
+
+	onOpen(): void {
+		const {contentEl} = this;
+		contentEl.empty();
+
+		contentEl.createEl('h2', {text: 'Similar Notes'});
+
+		const list = contentEl.createEl('div', {cls: 'similar-notes-list'});
+
+		this.results.forEach(result => {
+			if (result.payload.path === this.currentPath) return; // Skip current note
+
+			const item = list.createEl('div', {cls: 'similar-note-item'});
+			
+			const link = item.createEl('a', {
+				text: result.payload.path,
+				cls: 'similar-note-link'
+			});
+			
+			const score = item.createEl('span', {
+				text: ` (${(result.score * 100).toFixed(1)}% similar)`,
+				cls: 'similar-note-score'
+			});
+
+			link.addEventListener('click', async (e: MouseEvent) => {
+				e.preventDefault();
+				const targetFile = this.app.vault.getAbstractFileByPath(result.payload.path);
+				if (targetFile instanceof TFile) {
+					await this.app.workspace.getLeaf().openFile(targetFile);
+					this.close();
+				}
+			});
+		});
+
+		// Add styles
+		contentEl.createEl('style', {
+			text: `
+				.similar-notes-list {
+					margin-top: 1em;
+				}
+				.similar-note-item {
+					padding: 8px;
+					border-bottom: 1px solid var(--background-modifier-border);
+				}
+				.similar-note-link {
+					color: var(--text-accent);
+					text-decoration: none;
+				}
+				.similar-note-link:hover {
+					text-decoration: underline;
+				}
+				.similar-note-score {
+					color: var(--text-muted);
+				}
+			`
+		});
+	}
+
+	onClose() {
+		const {contentEl} = this;
+		contentEl.empty();
 	}
 }
 
