@@ -1,94 +1,80 @@
-# Obsidian Sample Plugin
+# Local LLM Assistant for Obsidian
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+A plugin for Obsidian that uses local LLMs (via Ollama) and vector database (Qdrant) to provide semantic search capabilities for your notes.
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+## Features
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+- **Semantic Note Processing**: Automatically generates embeddings for your notes using Ollama's embedding models
+- **Find Similar Notes**: Discover semantically related notes based on content similarity, not just keyword matches
+- **Real-time Updates**: Automatically processes notes as you create or modify them
+- **Local Privacy**: All processing happens locally on your machine - no data leaves your system
 
-## First time developing plugins?
+## Requirements
 
-Quick starting guide for new plugin devs:
+1. [Ollama](https://ollama.ai/) - For generating note embeddings
+   - Default model: `nomic-embed-text`
+   - Default host: `http://localhost:11434`
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+2. [Qdrant](https://qdrant.tech/) - For vector similarity search
+   - Default host: `http://localhost:6333`
+   - Can be installed via Docker: `docker run -p 6333:6333 qdrant/qdrant`
 
-## Releasing new releases
+## Installation
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+1. Install the plugin from Obsidian's Community Plugins
+2. Enable the plugin in Obsidian's settings
+3. Configure the plugin settings if your Ollama or Qdrant instances use different hosts
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+## Usage
 
-## Adding your plugin to the community plugin list
+### Initial Setup
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+1. After installing and enabling the plugin, click the brain icon in the left sidebar to process all existing notes
+2. The plugin will generate embeddings for all your notes and store them in Qdrant
+3. Progress notifications will show the processing status
 
-## How to use
+### Finding Similar Notes
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+1. Open any note in Obsidian
+2. Use one of these methods to find similar notes:
+   - Open the Command Palette (Cmd/Ctrl+P) and search for "Find Similar Notes"
+   - Click the brain icon in the left sidebar
 
-## Manually installing the plugin
+A modal will appear showing up to 5 most similar notes, with similarity scores. Click any note in the results to open it.
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+### Automatic Updates
 
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint .\src\`
+The plugin automatically processes any new or modified notes, so your semantic search index stays up to date as you work.
 
-## Funding URL
+## Settings
 
-You can include funding URLs where people who use your plugin can financially support it.
+The plugin settings can be configured in Obsidian's settings panel:
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+- **Ollama Host**: The URL of your Ollama instance
+- **Qdrant Host**: The URL of your Qdrant instance
+- **Qdrant Collection**: The name of the collection to store embeddings
+- **Embedding Model**: The Ollama model to use for generating embeddings
 
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
-```
+## How It Works
 
-If you have multiple URLs, you can also do:
+1. When you create or modify a note, the plugin sends its content to Ollama to generate an embedding vector
+2. The embedding vector is stored in Qdrant along with the note's path
+3. When you search for similar notes, the current note's embedding is compared with all other notes' embeddings using cosine similarity
+4. Notes with similarity scores above 70% are shown in the results
 
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
-```
+## Privacy & Security
 
-## API Documentation
+All processing happens locally:
+- Embeddings are generated locally using Ollama
+- Vectors are stored locally in Qdrant
+- No data is sent to external servers
+- No internet connection required after initial setup
 
-See https://github.com/obsidianmd/obsidian-api
+## Troubleshooting
+
+If you encounter issues:
+
+1. Ensure Ollama is running and accessible at the configured host
+2. Ensure Qdrant is running and accessible at the configured host
+3. Check the console for any error messages
+4. Try reprocessing all notes by clicking the brain icon
