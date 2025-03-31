@@ -287,29 +287,6 @@ class SimilarNotesModal extends Modal {
 				}
 			});
 		});
-
-		// Add styles
-		contentEl.createEl('style', {
-			text: `
-				.similar-notes-list {
-					margin-top: 1em;
-				}
-				.similar-note-item {
-					padding: 8px;
-					border-bottom: 1px solid var(--background-modifier-border);
-				}
-				.similar-note-link {
-					color: var(--text-accent);
-					text-decoration: none;
-				}
-				.similar-note-link:hover {
-					text-decoration: underline;
-				}
-				.similar-note-score {
-					color: var(--text-muted);
-				}
-			`
-		});
 	}
 
 	onClose() {
